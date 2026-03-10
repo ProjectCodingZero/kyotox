@@ -10,7 +10,6 @@ fn main() -> color_eyre::Result<()> {
     // 1. Configurar manejo de errores y pánicos
     color_eyre::install()?;
     setup_panic_hook();
-
     // 2. Inicializar terminal (Modo raw + Pantalla alterna)
     let mut terminal = ratatui::init();
 
@@ -25,44 +24,32 @@ fn main() -> color_eyre::Result<()> {
 }
 
 fn run_app(terminal: &mut ratatui::DefaultTerminal) -> color_eyre::Result<()> {
-    let mut string = String::new();
-    let app = App::default();
+    let mut app = App::default();
 
-    loop {
+    while !app.exit {
+        app.handle_events()?;
         terminal.draw(|frame| {
             let area = frame.area();
+            let main_block = Block::default()
+                .borders(Borders::ALL)
+                .title(app.title.trim());
             frame.render_widget(
-                Paragraph::new(string.trim()).white().on_black().block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(app.title.trim()),
-                ),
+                Paragraph::new(format!(
+                    "{}{}",
+                    app.text
+                        .history
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<String>(),
+                    app.text.actual.trim()
+                ))
+                .white()
+                .on_black()
+                .block(main_block),
                 area,
             );
+            frame.set_cursor_position(app.text.clone());
         })?;
-
-        if event::poll(std::time::Duration::from_millis(16))? {
-            if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        // Salir con 'q' solo si no estamos escribiendo
-                        KeyCode::Char('q') if string.is_empty() => break,
-                        KeyCode::Char(ch) => string.push(ch),
-                        KeyCode::Delete | KeyCode::Backspace => {
-                            string.pop();
-                        }
-                        KeyCode::Enter => {
-                            if string.trim() == "exit" {
-                                break;
-                            }
-                            string.clear();
-                        }
-                        KeyCode::Esc => break,
-                        _ => {}
-                    }
-                }
-            }
-        }
     }
     Ok(())
 }
