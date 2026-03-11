@@ -8,3 +8,11 @@ ratatui = { version = "0.30", features = ["crossterm_0_29"] }
 crossterm = "0.29"
 termion = "4.0.6"
 color-eyre = "0.6"
+rayon = { version = "1.11", optional = true }
+parking_lot = "0.12.5"
+
+[features]
+#Default herrumbre is multi-monothread
+default = ["rayon"]
+#monothread support
+monothread = []

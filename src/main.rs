@@ -1,12 +1,16 @@
 mod command;
 mod tui;
-use crossterm::event::{self, KeyCode, KeyEventKind};
-use ratatui::style::Stylize;
-use ratatui::widgets::{Block, Borders, Paragraph};
+use std::fmt::Error;
+use std::io;
+
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
+use crossterm::execute;
+use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 
 use crate::tui::App;
 
 fn main() -> color_eyre::Result<()> {
+    // Check if threads are available
     // 1. Configurar manejo de errores y pánicos
     color_eyre::install()?;
     setup_panic_hook();
@@ -22,34 +26,31 @@ fn main() -> color_eyre::Result<()> {
     app_result?;
     Ok(())
 }
-
+#[inline]
+fn threads_available() -> usize {
+    #[cfg(feature = "default")]
+    {
+        let threads = rayon::current_num_threads();
+        if threads == 1 { threads } else { threads - 1 }
+    }
+    #[cfg(not(feature = "default"))]
+    {
+        1
+    }
+}
+fn set_thread_pool() {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(threads_available())
+        .build_global()
+        .unwrap()
+}
 fn run_app(terminal: &mut ratatui::DefaultTerminal) -> color_eyre::Result<()> {
     let mut app = App::default();
+    let pool = rayon::ThreadPoolBuilder::default().build().unwrap();
 
     while !app.exit {
         app.handle_events()?;
-        terminal.draw(|frame| {
-            let area = frame.area();
-            let main_block = Block::default()
-                .borders(Borders::ALL)
-                .title(app.title.trim());
-            frame.render_widget(
-                Paragraph::new(format!(
-                    "{}{}",
-                    app.text
-                        .history
-                        .iter()
-                        .map(|s| s.as_str())
-                        .collect::<String>(),
-                    app.text.actual.trim()
-                ))
-                .white()
-                .on_black()
-                .block(main_block),
-                area,
-            );
-            frame.set_cursor_position(app.text.clone());
-        })?;
+        terminal.draw(|frame| app.draw(frame))?;
     }
     Ok(())
 }
@@ -58,8 +59,10 @@ fn run_app(terminal: &mut ratatui::DefaultTerminal) -> color_eyre::Result<()> {
 /// la terminal se limpie antes de mostrar el error.
 fn setup_panic_hook() {
     let original_hook = std::panic::take_hook();
+    execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).ok();
     std::panic::set_hook(Box::new(move |panic_info| {
         ratatui::restore(); // Recupera la terminal
+        execute!(io::stdout(), DisableMouseCapture, LeaveAlternateScreen).ok();
         original_hook(panic_info); // Muestra el error original
     }));
 }
