@@ -14,6 +14,7 @@ fn main() -> color_eyre::Result<()> {
     // 1. Configurar manejo de errores y pánicos
     color_eyre::install()?;
     setup_panic_hook();
+    set_thread_pool();
     // 2. Inicializar terminal (Modo raw + Pantalla alterna)
     let mut terminal = ratatui::init();
 
@@ -22,7 +23,7 @@ fn main() -> color_eyre::Result<()> {
 
     // 4. Restaurar terminal SIEMPRE al final
     ratatui::restore();
-
+    execute!(io::stdout(), DisableMouseCapture, LeaveAlternateScreen).ok();
     app_result?;
     Ok(())
 }
@@ -38,15 +39,14 @@ fn threads_available() -> usize {
         1
     }
 }
-fn set_thread_pool() {
+fn set_thread_pool() -> Result<(), rayon::ThreadPoolBuildError> {
     rayon::ThreadPoolBuilder::new()
         .num_threads(threads_available())
         .build_global()
-        .unwrap()
 }
 fn run_app(terminal: &mut ratatui::DefaultTerminal) -> color_eyre::Result<()> {
     let mut app = App::default();
-    let pool = rayon::ThreadPoolBuilder::default().build().unwrap();
+    let pool = rayon::ThreadPoolBuilder::new().build().unwrap();
 
     while !app.exit {
         app.handle_events()?;
