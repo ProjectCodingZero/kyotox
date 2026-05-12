@@ -3,7 +3,7 @@ on: [push, pull_request]
 
 jobs:
   check-line-endings:
-    runs-on: docker
+    runs-on: codeberg-tiny
     container:
       image: alpine:lastest
     steps:
