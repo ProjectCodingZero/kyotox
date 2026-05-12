@@ -8,18 +8,32 @@ jobs:
       image: rust:alpine
     steps:
       - name: Install dependencies for Actions
-        run: apk add  --no-cache nodejs git
+        run: apk add --no-cache nodejs git file
 
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Verify if not CRLF
         run: |
-          files=$(grep -rIl $'\r' .)
-          if [ ! -z "$files" ]; then
-            echo "Error: Se detectaron archivos con CRLF"
-            exit 1
+          files=$(find . -type f -not -path "./.git/*" -not -path "./target/*" -exec file {} + | grep "CRLF" | cut -d: -f1)
+          if [ -n "$files" ]; then
+            echo "Error: Files are not using LF"
+            echo "$files"
+            echo "HAS_CRLF=true" > /tmp/has_crlf_error
+          else
+            echo "OK: Files only uses LF"
+            echo "HAS_CRLF=false" > /tmp/has_crlf_error
           fi
+        continue-on-error: true
 
       - name: Run Clippy
         run: cargo clippy -- -D warnings
+
+      - name: Status Check
+        if: always()
+        run: |
+          if [ -f /tmp/has_crlf_error ] && [ "$(cat /tmp/has_crlf_error)" = "true" ]; then
+            echo "Job failure because there are not only LF files."
+          exit 1
+          fi
+          echo "Finished Successfully."
