@@ -8,7 +8,10 @@ jobs:
       image: rust:alpine
     steps:
       - name: Install dependencies for Actions
-        run: apk add --no-cache nodejs git file
+        run: |
+          apk add --no-cache nodejs git file
+          rustup component add clippy
+        
 
       - name: Checkout code
         uses: actions/checkout@v4
