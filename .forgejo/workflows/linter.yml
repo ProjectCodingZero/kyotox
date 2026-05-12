@@ -8,7 +8,7 @@ jobs:
       image: rust:alpine
     steps:
       - name: Install dependencies for Actions
-        uses: apk add  --no-cache nodejs git
+        run: apk add  --no-cache nodejs git
 
       - name: Checkout code
         uses: actions/checkout@v4
