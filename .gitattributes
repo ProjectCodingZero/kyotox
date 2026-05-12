@@ -1,0 +1,14 @@
+# Auto management
+* text=auto
+
+# LF
+*.sh text eol=lf
+*.py text eol=lf
+*.rs text eol=lf
+
+# CRLF
+*.bat text eol=crlf
+
+# Bin files
+*.png binary
+*.jpg binary
