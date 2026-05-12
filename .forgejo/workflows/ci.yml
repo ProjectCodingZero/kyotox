@@ -9,10 +9,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
       - name: Verify if not CRLF
         run: |
           files=$(grep -lR $'\r' .)
           if [ ! -z "$files" ]; then
-          echo "Error: Se detectaron archivos con CRLF"
-          exit 1
-        fi
+            echo "Error: Se detectaron archivos con CRLF"
+            exit 1
+          fi
+          
+
+      - name: Build Project
+        run: cargo build --verbose
+      - name: Test Project
+        run: cargo test --verbose
