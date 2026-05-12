@@ -5,7 +5,7 @@ jobs:
   check-line-endings:
     runs-on: codeberg-tiny
     container:
-      image: alpine:lastest
+      image: alpine:latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
