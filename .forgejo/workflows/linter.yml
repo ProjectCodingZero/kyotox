@@ -3,7 +3,7 @@ on: [push, pull_request]
 
 jobs:
   check-line-endings:
-    runs-on: codeberg-tiny
+    runs-on: codeberg-medium
     container:
       image: rust:alpine
     steps:
@@ -30,7 +30,9 @@ jobs:
         continue-on-error: true
 
       - name: Run Clippy
-        run: cargo clippy -- -D warnings
+        run: |
+          cargo build --release
+          cargo clippy -- -D warnings
 
       - name: Status Check
         if: always()
