@@ -1,5 +1,6 @@
 use parking_lot::RwLock;
 use std::{collections::HashMap, error::Error, sync::Arc};
+use smol::Async;
 pub trait Manager<T> {
     fn add(&mut self, generic: T) -> Result<(), impl std::error::Error>;
     fn get(&self, name: &str) -> Option<T>;

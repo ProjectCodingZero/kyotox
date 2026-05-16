@@ -1,4 +1,4 @@
-use crossterm::event::{KeyEvent, KeyModifiers, MouseButton, MouseEventKind};
+use crossterm::event::{KeyModifiers};
 use ratatui::{
     DefaultTerminal, Frame,
     layout::Position,
@@ -7,9 +7,15 @@ use ratatui::{
 };
 use std::{
     fmt,
-    io::{Result, Write},
     sync::Arc,
 };
+use std::path::Path;
+use color_eyre::eyre::Result;
+use smol::block_on;
+use smol::lock::RwLock;
+use crate::lua::ScriptEngineBridge;
+use crate::tui::SharedData;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Point {
     pub x: u16,
@@ -17,15 +23,15 @@ pub struct Point {
 }
 #[derive(Debug, Clone)]
 pub struct Text {
-    cursor_position: Point,
-    pub actual: Arc<String>,
-    pub history: Vec<Arc<String>>,
+    cursor: Point,
+    pub buffer: Arc<String>,
+    pub history: Vec<Arc<str>>,
 }
 #[derive(Debug)]
 pub struct App {
-    mode: EditorMode,
-    pub title: String,
-    pub text: Text,
+    state: Arc<RwLock<SharedData>>,
+    rx: smol::channel::Receiver<SharedData>,
+    lua: mlua::Lua,
     pub exit: bool,
 }
 //Direction for delete
@@ -34,13 +40,14 @@ pub enum Direction {
     Previous,
     Next,
 }
-#[derive(Debug, PartialEq, Default)]
-enum EditorMode {
+#[derive(Debug, PartialEq, Default, Clone)]
+pub enum EditorMode {
     #[default]
     Insert,
     Replace,
     Command,
 }
+
 impl fmt::Display for EditorMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -52,59 +59,84 @@ impl fmt::Display for EditorMode {
 }
 impl Default for App {
     fn default() -> Self {
-        Self {
-            text: Text::new(),
-            title: String::from("Herrumbre"),
-            mode: EditorMode::default(),
+        let (tx, rx) = smol::channel::unbounded::<SharedData>();
+        let lua = mlua::Lua::new();
+        let shared_data = Arc::new(RwLock::new(SharedData::default()));
+        let bridge = ScriptEngineBridge{
+            tx,
+            state: shared_data.clone(),
+        };
+        lua.globals().set("app", bridge).unwrap();
+        let config_lua = "init.lua";
+        let script = std::fs::read_to_string(Path::new(config_lua)).unwrap_or("Error".to_string());
+
+        lua.load(script).exec().unwrap_or(());
+        Self{
+            rx,
+            lua,
+            state: shared_data,
             exit: false,
         }
     }
 }
-
 impl App {
-    pub fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
+    pub async fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
+
         while !self.exit {
+
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
         }
         Ok(())
     }
+    #[inline]
     fn save_text(&mut self) {
-        self.text.new_actual();
+        block_on(async {
+            let mut state = self.state.write().await;
+            state.text.save_buffer();
+        });
     }
     pub fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
+        let update: mlua::Function = self.lua.globals().get("update").unwrap();
+        update.call(()).unwrap_or(());
+        let state = block_on(async {self.state.read().await});
         let main_block = Block::default()
             .borders(Borders::ALL)
-            .title(self.title.trim());
-        let padding = self.mode.to_string().len() as u16;
+            .title(state.title.trim());
+        let padding = state.mode.to_string().len() as u16;
         frame.render_widget(
             Paragraph::new(format!(
                 "{}{}{}",
-                self.text
+                state.text
                     .history
                     .iter()
-                    .map(|s| s.as_str())
+                    .map(|s| s.trim())
                     .collect::<String>(),
-                self.mode,
-                self.text.actual.trim(),
+                state.mode,
+                state.text.buffer.trim(),
             ))
             .white()
             .on_black()
             .block(main_block),
             area,
         );
+        drop(state);
+        let state = block_on(async{
+            self.state.write().await
+        });
         let position = Position {
-            x: self.text.cursor_position.x + padding + 1,
-            y: self.text.cursor_position.y + 1,
+            x: state.text.cursor.x + padding + 1,
+            y: state.text.cursor.y + 1,
         };
         frame.set_cursor_position(position);
     }
-
     pub fn handle_events(&mut self) -> Result<()> {
-        use crossterm::event::{self, Event, KeyEventKind};
-
-        if event::poll(std::time::Duration::from_millis(500))? {
+        use crossterm::event::{self, Event};
+        let state = block_on(async { self.state.read().await });
+        let fps = state.fps;
+        drop(state);
+        if event::poll(std::time::Duration::from_millis(fps))? {
             match event::read()? {
                 Event::Key(event) => self.event_key_press(event),
                 Event::Mouse(_event) => {}
@@ -119,113 +151,121 @@ impl App {
         }
         Ok(())
     }
-    fn change_mode(&mut self, mode: EditorMode) {
-        self.mode = mode;
-    }
-    fn event_key_modifiers(&mut self, key_modifier: crossterm::event::KeyModifiers) {
+    fn event_key_modifiers(&mut self, key_modifier: KeyModifiers) {
+        let mut state = block_on(async {self.state.write().await});
         match key_modifier {
             KeyModifiers::CONTROL => {
-                if (self.mode == EditorMode::Command) {
-                    self.change_mode(EditorMode::Insert);
+                if state.mode == EditorMode::Command {
+                    state.mode = EditorMode::Insert;
                 } else {
-                    self.change_mode(EditorMode::Command);
+                    state.mode = EditorMode::Command;
                 }
             }
             _ => {}
         }
     }
+
+
     fn event_key_press(&mut self, key: crossterm::event::KeyEvent) {
         use crossterm::event::KeyCode;
+
+        if key.is_release(){
+            return;
+        }
+
         self.event_key_modifiers(key.modifiers);
+        let mut state = block_on(async {self.state.write().await});
         match key.code {
             KeyCode::Char(ch) => {
                 // Handle character input (example: update title or buffer)
-                self.text.insert(ch);
+                state.text.insert(ch);
             }
             KeyCode::Left => {
                 // Move cursor left
-                let cursor = self.text.cursor_position.clone();
+                let cursor = state.text.cursor;
                 if (cursor.x as usize) > 0 {
-                    self.text.cursor_position.x -= 1;
+                    state.text.cursor.x -= 1;
                 }
-            }
+            },
             KeyCode::Right => {
                 // Move cursor right
-                let cursor = self.text.cursor_position.clone();
-                if (cursor.x as usize) < self.text.actual.len() {
-                    self.text.cursor_position.x += 1;
+                let cursor = state.text.cursor;
+                if (cursor.x as usize) < state.text.buffer.len() {
+                    state.text.cursor.x += 1;
                 }
             }
             KeyCode::Enter => {
                 // Example: clear title or buffer
-                if self.text.actual.trim() == "exit" {
+                if state.text.buffer.trim() == "exit" {
                     self.exit = true;
                 } else {
+                    drop(state);
                     self.save_text();
                 }
             }
             KeyCode::Backspace => {
                 // Remove last character from title or buffer
-                self.text.remove(Direction::Previous);
+                state.text.remove(Direction::Previous);
             }
             KeyCode::Delete => {
                 // Remove next character from title or buffer
-                self.text.remove(Direction::Next);
+                state.text.remove(Direction::Next);
             }
             KeyCode::Home => {
                 // Move cursor to beginning of line
-                self.text.cursor_position.x = 0;
+                state.text.cursor.x = 0;
             }
             KeyCode::End => {
                 // Move cursor to end of line
-                self.text.cursor_position.x = self.text.actual.len() as u16;
+                state.text.cursor.x = state.text.buffer.len() as u16;
             }
             _ => {}
         }
-    }
-    fn get_text(&self) -> &str {
-        &self.title
+
     }
 }
 //Implementation for text
-impl Text {
-    pub fn new() -> Self {
-        Self {
-            actual: Arc::new(String::new()),
+impl Default for Text{
+    fn default() -> Self {
+        Self{
+            buffer: Arc::new(String::new()),
             history: Vec::new(),
-            cursor_position: Point::default(),
+            cursor: Point::default(),
         }
     }
-    fn new_actual(&mut self) {
+}
+impl Text {
+    fn save_buffer(&mut self) {
         self.push('\n');
         self.add_history();
-        self.actual = Arc::new(String::new());
+        self.buffer = Arc::new(String::new());
 
-        self.cursor_position = Point {
+        self.cursor = Point {
             x: 0,
-            y: self.cursor_position.y + 1,
+            y: self.cursor.y + 1,
         };
     }
     fn add_history(&mut self) {
-        self.history.push(self.actual.clone());
+        let arc_str: Arc<str> = Arc::from(self.buffer.as_str());
+        self.history.push(arc_str);
     }
     pub fn push(&mut self, ch: char) {
-        let actual: &mut String = Arc::make_mut(&mut self.actual);
+        let actual: &mut String = Arc::make_mut(&mut self.buffer);
         actual.push(ch);
     }
     pub fn pop(&mut self) {
-        let actual: &mut String = Arc::make_mut(&mut self.actual);
+        let actual: &mut String = Arc::make_mut(&mut self.buffer);
         actual.pop();
     }
     pub fn insert(&mut self, ch: char) {
-        let actual: &mut String = Arc::make_mut(&mut self.actual);
-        let cursor: &Point = &mut self.cursor_position;
+        let actual: &mut String = Arc::make_mut(&mut self.buffer);
+        let cursor: &Point = &mut self.cursor;
         actual.insert(cursor.x as usize, ch);
-        self.cursor_position.x += 1;
+        self.cursor.x += 1;
     }
     pub fn remove(&mut self, direction: Direction) {
-        let actual: &mut String = Arc::make_mut(&mut self.actual);
-        let cursor: &mut Point = &mut self.cursor_position;
+        let actual: &mut String = Arc::make_mut(&mut self.buffer);
+        let cursor: &mut Point = &mut self.cursor;
         match direction {
             Direction::Previous => {
                 if cursor.x > 0 {
@@ -241,11 +281,11 @@ impl Text {
         }
     }
 }
-impl Into<Position> for Point {
-    fn into(self) -> Position {
+impl From<Point> for Position {
+    fn from(point: Point) -> Self {
         Position {
-            x: self.x,
-            y: self.y,
+            x: point.x,
+            y: point.y,
         }
     }
 }
