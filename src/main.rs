@@ -1,15 +1,21 @@
-use std::fmt::Error;
 use std::io;
 use color_eyre::eyre::{eyre, Result};
-use crossterm::event::{DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
-use crossterm::execute;
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
-use herrumbre::tui::App;
-
+use log::{error, trace, warn};
+use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen}};
+use herrumbre::{
+    Command,
+    Parser,
+    logger::setup_logger,
+    tui::App};
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() -> Result<()> {
+    let args = Command::parse();
+    _ = setup_logger(args.log);
     // Check if threads are available
     // Start configure
     color_eyre::install()?;
@@ -19,10 +25,20 @@ fn main() -> Result<()> {
     let mut terminal = ratatui::init();
 
     // Run app
-    let result = smol::block_on(async {
-        let task = run_app(&mut terminal);
-        
-        task.await;
+    smol::block_on(async {
+        trace!("Application initialized.");
+        let mut app = App::default();
+
+        while !app.exit {
+            match app.handle_events() {
+                Ok(()) => (),
+                Err(e) => {warn!("{}",e)}
+            }
+            match terminal.draw(|frame| app.draw(frame)) {
+                Ok(_) => (),
+                Err(e) => {warn!("{}",e)}
+            }
+        };
     });
 
     // execute!(io::stdout(), DisableMouseCapture, LeaveAlternateScreen).ok();
@@ -54,7 +70,7 @@ fn set_thread_pool() -> Result<()> {
         Err(e) => Err(eyre!("Error on thread pool init"))   ,
     }
 }
-async fn run_app(terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
+async fn _run_app(terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
     let mut app = App::default();
 
     while !app.exit {
@@ -70,7 +86,9 @@ fn setup_panic_hook() {
     let original_hook = std::panic::take_hook();
     // execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).ok();
     execute!(io::stdout(), EnterAlternateScreen).ok();
+    trace!("Setup hook initialised.");
     std::panic::set_hook(Box::new(move |panic_info| {
+        error!("{}", panic_info);
         ratatui::restore(); // Recupera la terminal
         execute!(io::stdout(), DisableMouseCapture, LeaveAlternateScreen).ok();
         original_hook(panic_info); // Muestra el error original

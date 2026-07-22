@@ -8,23 +8,33 @@ use ratatui::{
 use std::{
     fmt,
     sync::Arc,
+    path::Path
 };
-use std::path::Path;
 use color_eyre::eyre::Result;
-use smol::block_on;
-use smol::lock::RwLock;
-use crate::lua::ScriptEngineBridge;
-use crate::tui::SharedData;
+use log::{debug, error, trace, warn};
+use smol::{block_on, lock::RwLock};
+use crate::{lua::ScriptEngineBridge, tui::SharedData};
 
+/// [`Point`] represents a specific position on the screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Point {
+    /// Horizontal coordinate (column/X axis)
     pub x: u16,
+    /// Vertical coordinate (row/Y axis)
     pub y: u16,
 }
+
+/// [`Text`] is used for state of cursor and buffer
+///
+/// Cursor and Buffer management for user
+/// History contains the previous saved states
 #[derive(Debug, Clone)]
 pub struct Text {
+    /// Current cursor position
     cursor: Point,
+    /// Current text editing by user
     pub buffer: Arc<String>,
+    /// Buffer that was saved by user
     pub history: Vec<Arc<str>>,
 }
 #[derive(Debug)]
@@ -57,6 +67,13 @@ impl fmt::Display for EditorMode {
         }
     }
 }
+
+/// Initializes a new [`App`] instance with default settings.
+///
+/// - Creates an unbounded channel (`smol::channel::unbounded`) for `SharedData`.
+/// - Sets up the `mlua::Lua` engine with thread-safe shared state (`Arc<RwLock>`).
+/// - Binds the `ScriptEngineBridge` directly to the Lua global environment as `"app"`.
+/// - Attempts to read and execute `init.lua`, logging warnings or errors if it fails.
 impl Default for App {
     fn default() -> Self {
         let (tx, rx) = smol::channel::unbounded::<SharedData>();
@@ -68,9 +85,18 @@ impl Default for App {
         };
         lua.globals().set("app", bridge).unwrap();
         let config_lua = "init.lua";
-        let script = std::fs::read_to_string(Path::new(config_lua)).unwrap_or("Error".to_string());
+        match std::fs::read_to_string(&Path::new(config_lua)){
+            Ok(script ) => {
 
-        lua.load(script).exec().unwrap_or(());
+                let result = lua.load(&script).exec();
+                if let Err(err) = result{
+                    error!("{}", err);
+                }
+            }
+            Err(err) => {
+                warn!("Lua error: {}", err);
+            }
+        }
         Self{
             rx,
             lua,
@@ -80,6 +106,7 @@ impl Default for App {
     }
 }
 impl App {
+    /// Run the app while [`app.exit`] is false
     pub async fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
 
         while !self.exit {
@@ -116,7 +143,7 @@ impl App {
                 state.mode,
                 state.text.buffer.trim(),
             ))
-            .white()
+            .green()
             .on_black()
             .block(main_block),
             area,
@@ -143,7 +170,7 @@ impl App {
 
                 // Handle mouse events here
                 Event::Resize(width, height) => {
-                    println!("{:#?} {:#?}", width, height)
+                    trace!("{:#?} {:#?}", width, height)
                     // Handle terminal resize here
                 }
                 _ => {}

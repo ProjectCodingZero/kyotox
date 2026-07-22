@@ -1,10 +1,8 @@
-use std::ops::Deref;
-use std::sync::{Arc, Mutex};
-use mlua::{prelude, FromLua, IntoLua, Lua, Table, UserData, UserDataMethods};
-use color_eyre::eyre::{eyre, Result};
+use std::sync::Arc;
+use mlua::{UserData, UserDataMethods};
 use smol::lock::RwLock;
-use crate::{Settings};
-use crate::tui::{AppConfig, SharedData};
+use log::trace;
+use crate::tui::SharedData;
 pub struct ScriptEngineBridge{
     pub tx: smol::channel::Sender<SharedData>,
     pub state: Arc<RwLock<SharedData>>,
