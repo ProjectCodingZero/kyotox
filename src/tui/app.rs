@@ -1,21 +1,17 @@
-use crossterm::event::{KeyModifiers};
+use crate::{lua::ScriptEngineBridge, tui::SharedData};
+use color_eyre::eyre::Result;
+use crossterm::event::KeyModifiers;
+use log::{error, trace, warn};
 use ratatui::{
     DefaultTerminal, Frame,
     layout::Position,
     style::Stylize,
     widgets::{Block, Borders, Paragraph},
 };
-use std::{
-    fmt,
-    sync::Arc,
-    path::Path
-};
-use color_eyre::eyre::Result;
-use log::{debug, error, trace, warn};
 use smol::{block_on, lock::RwLock};
-use crate::{lua::ScriptEngineBridge, tui::SharedData};
+use std::{fmt::Display, path::Path, sync::Arc};
 
-/// [`Point`] represents a specific position on the screen.
+/// `Point` represents a specific position on the screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Point {
     /// Horizontal coordinate (column/X axis)
@@ -24,19 +20,19 @@ pub struct Point {
     pub y: u16,
 }
 
-/// [`Text`] is used for state of cursor and buffer
-///
-/// Cursor and Buffer management for user
-/// History contains the previous saved states
+/// Represents the state of the text editor, including cursor position,
+/// current buffer contents, and undo/redo history.
 #[derive(Debug, Clone)]
 pub struct Text {
-    /// Current cursor position
-    cursor: Point,
-    /// Current text editing by user
+    /// Current position of the cursor within the text.
+    pub cursor: Point,
+    /// Current text buffer being edited by the user.
     pub buffer: Arc<String>,
-    /// Buffer that was saved by user
+    /// History of previously saved state snapshots.
     pub history: Vec<Arc<str>>,
 }
+
+/// The core application state and runtime context for the TUI.
 #[derive(Debug)]
 pub struct App {
     state: Arc<RwLock<SharedData>>,
@@ -44,12 +40,22 @@ pub struct App {
     lua: mlua::Lua,
     pub exit: bool,
 }
-//Direction for delete
+
+/// Direction for character deletion.
+///
+/// - `Previous`: Deletes the character before the cursor.
+/// - `Next`: Deletes the character after the cursor.
 #[derive(Debug)]
 pub enum Direction {
     Previous,
     Next,
 }
+
+/// Represents the current mode of the editor.
+///
+/// - `Insert`: Inserts characters at the current cursor position.
+/// - `Replace`: Overwrites characters at the current cursor position.
+/// - `Command`: Allows the user to execute terminal commands.
 #[derive(Debug, PartialEq, Default, Clone)]
 pub enum EditorMode {
     #[default]
@@ -57,21 +63,23 @@ pub enum EditorMode {
     Replace,
     Command,
 }
-
-impl fmt::Display for EditorMode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+trait Draw<T: Display> {
+    fn draw(&self) -> T;
+}
+impl Draw<char> for EditorMode {
+    fn draw(&self) -> char {
         match self {
-            EditorMode::Insert => write!(f, "$"),
-            EditorMode::Replace => write!(f, "%"),
-            EditorMode::Command => write!(f, ">"),
+            EditorMode::Insert => '$',
+            EditorMode::Replace => '%',
+            EditorMode::Command => '>',
         }
     }
 }
 
-/// Initializes a new [`App`] instance with default settings.
+/// Initializes a new `App` instance with default settings.
 ///
-/// - Creates an unbounded channel (`smol::channel::unbounded`) for `SharedData`.
-/// - Sets up the `mlua::Lua` engine with thread-safe shared state (`Arc<RwLock>`).
+/// - Creates an unbounded channel [`smol::channel::unbounded`] for `SharedData`.
+/// - Sets up the [`mlua::Lua`] engine with thread-safe shared state (`Arc<RwLock>`).
 /// - Binds the `ScriptEngineBridge` directly to the Lua global environment as `"app"`.
 /// - Attempts to read and execute `init.lua`, logging warnings or errors if it fails.
 impl Default for App {
@@ -79,17 +87,16 @@ impl Default for App {
         let (tx, rx) = smol::channel::unbounded::<SharedData>();
         let lua = mlua::Lua::new();
         let shared_data = Arc::new(RwLock::new(SharedData::default()));
-        let bridge = ScriptEngineBridge{
+        let bridge = ScriptEngineBridge {
             tx,
             state: shared_data.clone(),
         };
         lua.globals().set("app", bridge).unwrap();
         let config_lua = "init.lua";
-        match std::fs::read_to_string(&Path::new(config_lua)){
-            Ok(script ) => {
-
+        match std::fs::read_to_string(&Path::new(config_lua)) {
+            Ok(script) => {
                 let result = lua.load(&script).exec();
-                if let Err(err) = result{
+                if let Err(err) = result {
                     error!("{}", err);
                 }
             }
@@ -97,7 +104,7 @@ impl Default for App {
                 warn!("Lua error: {}", err);
             }
         }
-        Self{
+        Self {
             rx,
             lua,
             state: shared_data,
@@ -106,11 +113,9 @@ impl Default for App {
     }
 }
 impl App {
-    /// Run the app while [`app.exit`] is false
+    /// Run the app while `app.exit` is false
     pub async fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
-
         while !self.exit {
-
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
         }
@@ -127,20 +132,21 @@ impl App {
         let area = frame.area();
         let update: mlua::Function = self.lua.globals().get("update").unwrap();
         update.call(()).unwrap_or(());
-        let state = block_on(async {self.state.read().await});
+        let state = block_on(async { self.state.read().await });
         let main_block = Block::default()
             .borders(Borders::ALL)
             .title(state.title.trim());
-        let padding = state.mode.to_string().len() as u16;
+        let padding: u16 = 1;
         frame.render_widget(
             Paragraph::new(format!(
                 "{}{}{}",
-                state.text
+                state
+                    .text
                     .history
                     .iter()
                     .map(|s| s.trim())
                     .collect::<String>(),
-                state.mode,
+                state.mode.draw(),
                 state.text.buffer.trim(),
             ))
             .green()
@@ -149,9 +155,7 @@ impl App {
             area,
         );
         drop(state);
-        let state = block_on(async{
-            self.state.write().await
-        });
+        let state = block_on(async { self.state.write().await });
         let position = Position {
             x: state.text.cursor.x + padding + 1,
             y: state.text.cursor.y + 1,
@@ -179,29 +183,29 @@ impl App {
         Ok(())
     }
     fn event_key_modifiers(&mut self, key_modifier: KeyModifiers) {
-        let mut state = block_on(async {self.state.write().await});
+        let mut state = block_on(async { self.state.write().await });
         match key_modifier {
             KeyModifiers::CONTROL => {
-                if state.mode == EditorMode::Command {
-                    state.mode = EditorMode::Insert;
-                } else {
-                    state.mode = EditorMode::Command;
+                state.mode = match state.mode {
+                    EditorMode::Insert => EditorMode::Command,
+                    EditorMode::Command => EditorMode::Insert,
+                    EditorMode::Replace => EditorMode::Insert,
                 }
             }
+
             _ => {}
         }
     }
 
-
     fn event_key_press(&mut self, key: crossterm::event::KeyEvent) {
         use crossterm::event::KeyCode;
 
-        if key.is_release(){
+        if key.is_release() {
             return;
         }
 
         self.event_key_modifiers(key.modifiers);
-        let mut state = block_on(async {self.state.write().await});
+        let mut state = block_on(async { self.state.write().await });
         match key.code {
             KeyCode::Char(ch) => {
                 // Handle character input (example: update title or buffer)
@@ -213,7 +217,7 @@ impl App {
                 if (cursor.x as usize) > 0 {
                     state.text.cursor.x -= 1;
                 }
-            },
+            }
             KeyCode::Right => {
                 // Move cursor right
                 let cursor = state.text.cursor;
@@ -248,19 +252,32 @@ impl App {
             }
             _ => {}
         }
-
     }
 }
 //Implementation for text
-impl Default for Text{
+impl Default for Text {
     fn default() -> Self {
-        Self{
+        Self {
             buffer: Arc::new(String::new()),
             history: Vec::new(),
             cursor: Point::default(),
         }
     }
 }
+// Display a `Text.history` on screen
+/*
+impl Draw<&str> for Text {
+    fn draw(&self) -> Vec<&'a str> {
+        self.history.iter().map(|s| s.to_string()).collect::Vec<str>()
+    }
+}
+// Display a `Text.buffer` on screen
+impl Draw<String> for Text {
+    fn draw(&self) -> String {
+        self.buffer.to_string()
+    }
+}
+*/
 impl Text {
     fn save_buffer(&mut self) {
         self.push('\n');

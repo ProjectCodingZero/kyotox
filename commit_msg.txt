@@ -1,0 +1,7 @@
+chore: update dependencies and docstrings
+
+Changes:
+  - `src/clap.rs`: Update dependencies.
+  - `src/lib.rs`: Update dependencies.
+  - `src/main.rs`: Update dependencies and improve logging.
+  - `src/tui/app.rs`: Implement `Draw` trait and add docstrings.

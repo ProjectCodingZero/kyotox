@@ -1,15 +1,16 @@
-use std::io;
-use color_eyre::eyre::{eyre, Result};
-use log::{error, trace, warn};
+use color_eyre::eyre::{Result, eyre};
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
+    event::{
+        DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags,
+        PushKeyboardEnhancementFlags,
+    },
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen}};
-use herrumbre::{
-    Command,
-    Parser,
-    logger::setup_logger,
-    tui::App};
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+};
+use herrumbre::{Command, Parser, logger::setup_logger, tui::App};
+use log::{error, trace, warn};
+use std::io;
+
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
@@ -32,13 +33,17 @@ fn main() -> Result<()> {
         while !app.exit {
             match app.handle_events() {
                 Ok(()) => (),
-                Err(e) => {warn!("{}",e)}
+                Err(e) => {
+                    warn!("{}", e)
+                }
             }
             match terminal.draw(|frame| app.draw(frame)) {
                 Ok(_) => (),
-                Err(e) => {warn!("{}",e)}
+                Err(e) => {
+                    warn!("{}", e)
+                }
             }
-        };
+        }
     });
 
     // execute!(io::stdout(), DisableMouseCapture, LeaveAlternateScreen).ok();
@@ -65,9 +70,13 @@ fn threads_available() -> usize {
 fn set_thread_pool() -> Result<()> {
     match rayon::ThreadPoolBuilder::new()
         .num_threads(threads_available())
-        .build_global(){
+        .build_global()
+    {
         Ok(_) => Ok(()),
-        Err(e) => Err(eyre!("Error on thread pool init"))   ,
+        Err(e) => {
+            error!("Thread pool init failed, {}", e);
+            Err(eyre!("Error on thread pool init"))
+        }
     }
 }
 async fn _run_app(terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
