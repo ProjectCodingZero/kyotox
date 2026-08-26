@@ -947,6 +947,7 @@ dependencies = [
  "ratatui",
  "rayon",
  "smol",
+ "thiserror 2.0.19",
 ]
 
 [[package]]

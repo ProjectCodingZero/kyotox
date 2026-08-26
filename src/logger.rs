@@ -1,6 +1,16 @@
-use std::time::SystemTime;
-use chrono::Local;
+//! Logging configuration and initialization module using `fern` and `log`.
+
 use crate::clap::LogLevel;
+use chrono::Local;
+use std::time::SystemTime;
+
+/// Initializes the global application logger using `fern`.
+///
+/// Configures log output formatting, timestamping, stdout/stderr chaining,
+/// and log file generation inside the `logs/` directory.
+///
+/// # Errors
+/// Returns [`fern::InitError`] if logger initialization or log file creation fails.
 pub fn setup_logger(level: LogLevel) -> Result<(), fern::InitError> {
     let level = log_level(level);
     let output_file = format!("logs/{}.log", Local::now().format("%H:%M:%S %d-%m-%Y"));
@@ -15,12 +25,14 @@ pub fn setup_logger(level: LogLevel) -> Result<(), fern::InitError> {
             ))
         })
         .level(level)
-        .chain(std::io::stdout())
-        .chain(std::io::stderr())
+        // .chain(std::io::stdout())
+        // .chain(std::io::stderr())
         .chain(fern::log_file(output_file)?)
         .apply()?;
     Ok(())
 }
+
+/// Converts the CLI `LogLevel` enum variant into a [`log::LevelFilter`].
 fn log_level(level: LogLevel) -> log::LevelFilter {
     match level {
         LogLevel::Error => log::LevelFilter::Error,
