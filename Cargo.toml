@@ -3,25 +3,33 @@ name = "herrumbre"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-ratatui = { version = "0.30", features = ["crossterm_0_29"] }
-crossterm = "0.29"
-color-eyre = "0.6"
-rayon = { version = "1.11", optional = true }
-parking_lot = "0.12.5"
-mlua = { version = "0.10.5", features = ["lua54", "vendored"] }
-mimalloc = { version= "*", features = ["secure"] }
+[workspace]
+members = [
+    "herrumbre-core",
+    "herrumbre-gui",
+    "herrumbre-script",
+    "herrumbre-tui"
+]
+
+[workspace.dependencies]
+thiserror = "2.0.20"
+rayon = { version = "1.11" }
 smol = "2.0.2"
-clap = {version = "4.6.1", features = ["derive", "color"]}
-log = "0.4.29"
-fern = "0.7.1"
 humantime = "2.4.0"
 chrono = "0.4.45"
-thiserror = "2.0.19"
+parking_lot = "0.12.5"
+
+[dependencies]
+color-eyre = "0.6"
+clap = { version = "4.6.1", features = ["derive", "color"] }
+mimalloc = { version= "*", features = ["secure"] }
+
+#intern import
+herrumbre-core = { path = "herrumbre-core"}
+#revisar donde
+mlua = { version = "0.10.5", features = ["lua54", "vendored"] }
+
 
 [features]
-#Default herrumbre is multi-monothread
-default = ["rayon"]
-#monothread support
-monothread = []
+
 

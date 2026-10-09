@@ -1,6 +1,7 @@
 //! Command-line argument parsing definitions using `clap`.
 
 pub use clap::{Parser, ValueEnum};
+use herrumbre_core::logger;
 
 /// Command-line arguments for the Herrumbre application.
 #[derive(Parser, Debug)]
@@ -27,4 +28,16 @@ pub enum LogLevel {
     /// Logging disabled (default).
     #[default]
     Off,
+}
+impl Into<logger::LevelFilter> for LogLevel{
+    fn into(self) -> logger::LevelFilter {
+        match self{
+            Self::Off => logger::LevelFilter::Off,
+            Self::Debug => logger::LevelFilter::Debug,
+            Self::Error => logger::LevelFilter::Error,
+            Self::Info => logger::LevelFilter::Info,
+            Self::Trace => logger::LevelFilter::Trace,
+            Self::Warn => logger::LevelFilter::Warn,
+        }
+    }   
 }

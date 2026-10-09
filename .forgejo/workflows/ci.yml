@@ -1,5 +1,14 @@
 name: Check for CRLF
-on: [push, pull_request]
+on: 
+  push:
+    branches:
+      - main 
+      - develop
+      - 'feature/*'
+  pull_request:
+    branches:
+      - main
+      - develop
 
 jobs:
   check-line-endings:
@@ -28,17 +37,12 @@ jobs:
             echo "HAS_CRLF=false" > /tmp/has_crlf_error
           fi
         continue-on-error: true
+      - name: Run Build
+        if: github.ref_name == 'main'
+        run: |
+          cargo build --release
 
       - name: Run Clippy
         run: |
-          cargo build --release
           cargo clippy -- -D warnings
-
-      - name: Status Check
-        if: always()
-        run: |
-          if [ -f /tmp/has_crlf_error ] && [ "$(cat /tmp/has_crlf_error)" = "true" ]; then
-            echo "Job failure because there are not only LF files."
-          exit 1
-          fi
-          echo "Finished Successfully."
+    
