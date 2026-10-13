@@ -1,17 +1,17 @@
-/// Initializes the global application logger using `fern`.
-///
-/// Configures log output formatting, timestamping, stdout/stderr chaining,
-/// and log file generation inside the `logs/` directory.
-///
-/// # Errors
-/// Returns [`fern::InitError`] if logger initialization or log file creation fails.
+//! Initializes the global application logger using `fern`.
+//!
+//! Configures log output formatting, timestamping, stdout/stderr chaining,
+//! and log file generation inside the `logs/` directory.
+//!
+//! # Errors
+//! Returns [`fern::InitError`] if logger initialization or log file creation fails.
 
-pub use log::LevelFilter;
-use std::time::SystemTime;
 use chrono::Local;
 use fern;
+pub use log::LevelFilter;
+use std::time::SystemTime;
 pub fn setup_logger(level: impl Into<LevelFilter>) -> Result<(), fern::InitError> {
-    let level  = level.into();
+    let level = level.into();
     let output_file = format!("logs/{}.log", Local::now().format("%H:%M:%S %d-%m-%Y"));
     fern::Dispatch::new()
         .format(|out, message, record| {

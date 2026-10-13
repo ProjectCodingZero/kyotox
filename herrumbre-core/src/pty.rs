@@ -1,6 +1,6 @@
 use core::error;
-use std::{fmt::Debug, io};
 use portable_pty::{CommandBuilder, PtySize};
+use std::{fmt::Debug, io};
 
 pub struct PtySession {
     master: Box<dyn portable_pty::MasterPty + Send>,
@@ -21,12 +21,14 @@ impl PtySession {
         let pty_system = portable_pty::native_pty_system();
         match pty_system.openpty(configs) {
             Ok(pair) => {
-                let child = pair.slave.spawn_command(command).map_err(|e| PtyError::SpawnError(e.to_string()))?;
+                let child = pair
+                    .slave
+                    .spawn_command(command)
+                    .map_err(|e| PtyError::SpawnError(e.to_string()))?;
                 drop(pair.slave); // Close the slave end in the parent process
                 Ok(Self {
                     master: pair.master,
                     child,
-                    
                 })
             }
             Err(e) => {
@@ -60,8 +62,12 @@ impl std::io::Write for PtySession {
             Ok(mut writer) => writer.write(buf),
             Err(e) => {
                 // TODO: Handle the error by returning an io::Error with a descriptive message
-                let err = io::Error::new(io::ErrorKind::Other, format!("Failed to take writer: {}", e));
-                Err(err)},
+                let err = io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to take writer: {}", e),
+                );
+                Err(err)
+            }
         }
     }
 
@@ -70,7 +76,10 @@ impl std::io::Write for PtySession {
             Ok(mut writer) => writer.flush(),
             Err(e) => {
                 // TODO: Handle the error by returning an io::Error with a descriptive message
-                let err = io::Error::new(io::ErrorKind::Other, format!("Failed to take writer: {}", e));
+                let err = io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to take writer: {}", e),
+                );
                 Err(err)
             }
         }
@@ -82,19 +91,22 @@ impl std::io::Read for PtySession {
             Ok(mut reader) => reader.read(buf),
             Err(e) => {
                 // TODO: Handle the error by returning an io::Error with a descriptive message
-                let err = io::Error::new(io::ErrorKind::Other, format!("Failed to take reader: {}", e));
+                let err = io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to take reader: {}", e),
+                );
                 Err(err)
             }
         }
     }
 }
 #[cfg(test)]
-mod tests{
+mod tests {
     use std::io::Read;
 
-use super::*;
+    use super::*;
     #[test]
-    fn pty_spawn(){
+    fn pty_spawn() {
         let pty_size = PtySize {
             rows: 24,
             cols: 80,
@@ -104,10 +116,17 @@ use super::*;
         let mut cmd = CommandBuilder::new("bash");
         cmd.args(&["-c", "echo 'Hello, PTY!'"]);
         let mut pty_session = PtySession::spawn(cmd, pty_size).unwrap();
-        
+
         let buffer = &mut [0u8; 1024];
         let reader = pty_session.read(buffer).unwrap();
-        println!("Read {} bytes from PTY: {}", reader, String::from_utf8_lossy(&buffer[..reader]));
-        assert_eq!(buffer[..reader], String::from("Hello, PTY!\r\n").into_bytes());
+        println!(
+            "Read {} bytes from PTY: {}",
+            reader,
+            String::from_utf8_lossy(&buffer[..reader])
+        );
+        assert_eq!(
+            buffer[..reader],
+            String::from("Hello, PTY!\r\n").into_bytes()
+        );
     }
 }

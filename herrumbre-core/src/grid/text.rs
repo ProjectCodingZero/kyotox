@@ -2,7 +2,6 @@ use std::sync;
 
 use crate::grid::point::Point;
 
-
 /// Represents the state of the text editor, including cursor position,
 /// current buffer contents, and execution line history.
 #[derive(Debug, Clone)]
@@ -43,9 +42,7 @@ impl Text {
 
         match direction {
             Direction::Previous => {
-                if let Some(prev_ch) =
-                    buffer[..self.buffer_idx].chars().next_back()
-                {
+                if let Some(prev_ch) = buffer[..self.buffer_idx].chars().next_back() {
                     self.cursor.x = self.cursor.x.saturating_sub(1);
                     self.buffer_idx -= prev_ch.len_utf8();
                 } else {

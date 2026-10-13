@@ -1,15 +1,13 @@
-
 use bitflags::bitflags;
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Color{
+pub struct Color {
     pub r: u8,
     pub g: u8,
     pub b: u8,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Cell{
+pub struct Cell {
     ch: char,
     fg: Option<Color>,
     bg: Option<Color>,
@@ -45,22 +43,27 @@ bitflags! {
         const DOUBLE_UNDERLINE = 1 << 11;
         const CURLY_UNDERLINE  = 1 << 12;
         const DOTTED_UNDERLINE = 1 << 13;
-        const DASHED_UNDERLINE = 1 << 14;   
+        const DASHED_UNDERLINE = 1 << 14;
     }
 }
 
-impl Default for Cell{
+impl Default for Cell {
     fn default() -> Self {
-        Self { ch: '\0', fg: None, bg: None, attrs: CellFlags::empty(), underline: UnderlineStyle::None}
+        Self {
+            ch: '\0',
+            fg: None,
+            bg: None,
+            attrs: CellFlags::empty(),
+            underline: UnderlineStyle::None,
+        }
     }
 }
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
     #[test]
     fn print_cell_size() {
-    println!("CellFlags (u16): {}", std::mem::size_of::<CellFlags>());
-    println!("Cell completo: {}", std::mem::size_of::<Cell>());
+        println!("CellFlags (u16): {}", std::mem::size_of::<CellFlags>());
+        println!("Cell completo: {}", std::mem::size_of::<Cell>());
+    }
 }
-}
-

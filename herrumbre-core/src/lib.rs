@@ -1,11 +1,10 @@
-
-pub mod logger;
-pub mod pty;
-pub mod grid;
 pub mod ansi;
-pub mod parser;
-pub mod term;
 pub mod cursor;
+pub mod grid;
+pub mod logger;
+pub mod parser;
+pub mod pty;
+pub mod term;
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }

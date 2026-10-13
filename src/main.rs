@@ -2,15 +2,15 @@
 //!
 //! Initializes logging, panic hooks, thread pools, terminal state via Ratatui,
 //! and runs the main async event loop.
-//! 
+//!
 
 mod my_clap;
 
 use herrumbre_core::logger;
 
 //Extern uses
-use color_eyre::eyre::{Result, eyre};
 use clap::{Command, Parser};
+use color_eyre::eyre::{Result, eyre};
 
 #[global_allocator]
 static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;

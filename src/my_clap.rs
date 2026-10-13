@@ -29,9 +29,9 @@ pub enum LogLevel {
     #[default]
     Off,
 }
-impl Into<logger::LevelFilter> for LogLevel{
+impl Into<logger::LevelFilter> for LogLevel {
     fn into(self) -> logger::LevelFilter {
-        match self{
+        match self {
             Self::Off => logger::LevelFilter::Off,
             Self::Debug => logger::LevelFilter::Debug,
             Self::Error => logger::LevelFilter::Error,
@@ -39,5 +39,5 @@ impl Into<logger::LevelFilter> for LogLevel{
             Self::Trace => logger::LevelFilter::Trace,
             Self::Warn => logger::LevelFilter::Warn,
         }
-    }   
+    }
 }

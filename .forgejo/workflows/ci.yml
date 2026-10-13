@@ -4,7 +4,7 @@ on:
     branches:
       - main 
       - develop
-      - 'feature/*'
+      - 'feature/**'
   pull_request:
     branches:
       - main
@@ -16,11 +16,13 @@ jobs:
     container:
       image: rust:alpine
     steps:
+      - name: Toolchain Configuration Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install dependencies for Actions
         run: |
           apk add --no-cache nodejs git file
           rustup component add clippy
-        
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,10 +39,11 @@ jobs:
             echo "HAS_CRLF=false" > /tmp/has_crlf_error
           fi
         continue-on-error: true
+
       - name: Run Build
         if: github.ref_name == 'main'
         run: |
-          cargo build --release
+          cargo build ${{ github.ref_name == 'main' && '--release' || '' }} --verbose
 
       - name: Run Clippy
         run: |

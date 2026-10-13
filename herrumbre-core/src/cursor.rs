@@ -6,4 +6,3 @@ pub struct Cursor {
     /// Vertical coordinate (row / Y axis).
     pub y: u16,
 }
-

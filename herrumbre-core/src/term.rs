@@ -1,4 +1,4 @@
-use crate::{grid::Grid, pty::PtySession , parser::Parser, cursor::Cursor};
+use crate::{cursor::Cursor, grid::Grid, parser::Parser, pty::PtySession};
 
 /// Represents the current operational mode of the editor interface.
 #[derive(Debug, PartialEq, Default, Clone)]
