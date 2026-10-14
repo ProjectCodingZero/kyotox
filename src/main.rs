@@ -17,5 +17,6 @@ static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 fn main() {
     let args = my_clap::Command::parse();
     _ = logger::setup_logger(args.log);
+    
     println!("{:?}", args);
 }

@@ -1,14 +1,14 @@
 use bitflags::bitflags;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
+pub enum Color {
+    RGB(u8, u8, u8),
+    Ascii(u8),
+    Indexed(u8),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cell {
-    ch: char,
+    pub ch: char,
     fg: Option<Color>,
     bg: Option<Color>,
     attrs: CellFlags,
@@ -56,6 +56,35 @@ impl Default for Cell {
             attrs: CellFlags::empty(),
             underline: UnderlineStyle::None,
         }
+    }
+}
+impl Cell {
+    pub fn new(ch: char, fg: Option<Color>, bg: Option<Color>) -> Self {
+        Self{
+            ch,
+            fg,
+            bg,
+            attrs: CellFlags::empty(),
+            underline: UnderlineStyle::None,
+        }
+    }
+    pub fn set_foreground(&mut self, fg: Option<Color>) {
+        self.fg = fg;
+    }
+    pub fn set_background(&mut self, bg: Option<Color>) {
+        self.bg = bg;
+    }
+    pub fn add_attrs(&mut self, attrs: Vec<CellFlags>) {
+        for attr in attrs {
+            self.attrs |= attr;
+        }
+    }
+    pub fn set_attrs(&mut self, attrs: Vec<CellFlags>) {
+        self.attrs = CellFlags::empty();
+        self.add_attrs(attrs);
+    }
+    pub fn set_underline(&mut self, underline: UnderlineStyle) {
+        self.underline = underline;
     }
 }
 #[cfg(test)]

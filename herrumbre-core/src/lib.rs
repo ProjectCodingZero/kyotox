@@ -5,6 +5,15 @@ pub mod logger;
 pub mod parser;
 pub mod pty;
 pub mod term;
+pub mod error;
+mod config;
+
+pub use config::{
+    Config,
+    CliConfig,
+    load_config
+};
+
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
@@ -18,4 +27,6 @@ mod tests {
         let result = add(2, 2);
         assert_eq!(result, 4);
     }
+
+
 }
