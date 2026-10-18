@@ -1,5 +1,4 @@
 use std::fs;
-use serde::de::Error;
 use serde::Deserialize;
 use thiserror::Error;
 use crate::logger::LevelFilter;
@@ -13,7 +12,7 @@ pub enum ConfigError{
     #[error("Required configuration field is missing: {0}")]
     MissingField(String),
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct Config{
     debug: bool,
     cli: CliConfig,
@@ -34,15 +33,6 @@ pub fn load_config(path: &str) -> Result<Config, ConfigError> {
     });
     Ok(config)
 }
-
-impl Default for Config {
-    fn default() -> Self {
-        Self{
-            cli: CliConfig::default(),
-            debug: false,
-        }
-    }
-}
 impl Default for CliConfig {
     fn default() -> Self {
         Self{
@@ -62,7 +52,7 @@ mod tests {
     fn test_load_config() {
         let toml_config = format!("{}/config.toml",get_test_path());
         let config = load_config(toml_config.as_str());
-        // Verify if config was loading sucessfully
+        // Verify if config was loading successfully
         assert!(config.is_ok());
     }
 }

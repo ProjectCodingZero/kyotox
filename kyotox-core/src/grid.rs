@@ -29,6 +29,16 @@ impl From<(usize, usize)> for Coordinates {
 }
 
 impl Grid {
+    pub fn new(rows: usize, cols: usize, max_scrollback: usize) -> Self {
+        let viewport = Vec::<Row>::with_capacity(rows);
+        Grid{
+            viewport,
+            scrollback: VecDeque::new(),
+            cols,
+            rows,
+            max_scrollback,
+        }
+    }
     pub fn resize(&mut self, rows: usize, cols: usize) {
         if rows > 0{
             self.cols = cols;

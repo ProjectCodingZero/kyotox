@@ -18,6 +18,7 @@ pub enum PtyError {
 
 impl PtySession {
     pub fn spawn(command: CommandBuilder, configs: PtySize) -> Result<Self, PtyError> {
+        log::info!("A new pty session has spawned");
         let pty_system = portable_pty::native_pty_system();
         match pty_system.openpty(configs) {
             Ok(pair) => {
@@ -113,20 +114,20 @@ mod tests {
             pixel_width: 0,
             pixel_height: 0,
         };
+        let text = "Hello, PTY!";
+        let echo_text = format!("echo '{}'", text);
         let mut cmd = CommandBuilder::new("bash");
-        cmd.args(&["-c", "echo 'Hello, PTY!'"]);
+        cmd.args(&["-c", echo_text.as_str()]);
         let mut pty_session = PtySession::spawn(cmd, pty_size).unwrap();
 
         let buffer = &mut [0u8; 1024];
-        let reader = pty_session.read(buffer).unwrap();
-        println!(
-            "Read {} bytes from PTY: {}",
-            reader,
-            String::from_utf8_lossy(&buffer[..reader])
-        );
+        let reader = pty_session.read(buffer.as_mut()).unwrap();
+
+        let expected_text = format!("{}\r\n", text).into_bytes();
+        let actual_text = &buffer[..reader];
         assert_eq!(
-            buffer[..reader],
-            String::from("Hello, PTY!\r\n").into_bytes()
+            actual_text,
+            expected_text
         );
     }
 }

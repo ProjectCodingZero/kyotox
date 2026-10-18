@@ -7,6 +7,7 @@ pub mod pty;
 pub mod term;
 pub mod error;
 mod config;
+pub mod thread;
 
 pub use config::{
     Config,

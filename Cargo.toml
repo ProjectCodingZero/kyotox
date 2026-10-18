@@ -1,8 +1,3 @@
-[package]
-name = "kyotox"
-version = "0.1.0"
-edition = "2024"
-
 [workspace]
 members = [
     "kyotox-core",
@@ -10,28 +5,19 @@ members = [
     "kyotox-script",
     "kyotox-tui"
 ]
+resolver = "2"
 
 [workspace.dependencies]
-thiserror = "2.0.20"
-rayon = { version = "1.11" }
-smol = "2.0.2"
-humantime = "2.4.0"
-chrono = "0.4.45"
-serde = { version = "1.0.229", features = ["derive"] }
-toml = "1.1.8+spec-1.1.0"
-parking_lot = "0.12.5"
-
-[dependencies]
-color-eyre = "0.6"
-clap = { version = "4.6.1", features = ["derive", "color"] }
-mimalloc = { version= "*", features = ["secure"] }
-
-#intern import
 kyotox-core = { path = "kyotox-core" }
-#revisar donde
+kyotox-script = { path = "kyotox-script"}
+kyotox-tui = { path = "kyotox-tui"}
+kyotox-gui = { path = "kyotox-gui"}
+mimalloc = { version= "0.1.52", features = ["secure"] }
+thiserror = "2.0.21"
+serde = { version = "1.0.229", features = ["derive"] }
+toml = "1.1.8"
+parking_lot = "0.12.5"
+clap = { version = "4.6.7", features = ["derive", "color"] }
+color-eyre = "0.6.5"
+log = { version="0.4.34", features = ["std", "serde"] }
 # mlua = { version = "0.10.5", features = ["lua54", "vendored"] }
-
-
-[features]
-
-

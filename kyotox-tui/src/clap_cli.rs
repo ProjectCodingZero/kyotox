@@ -3,10 +3,10 @@
 pub use clap::{Parser, ValueEnum};
 use kyotox_core::logger;
 
-/// Command-line arguments for the Herrumbre application.
+/// Command-line arguments for the Kyotox application.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-pub struct Command {
+pub struct CommandCli {
     /// Sets the application log level verbosity.
     #[arg(long, short='l', value_enum, default_value_t = LogLevel::Trace)]
     pub log: LogLevel,

@@ -4,17 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-humantime.workspace = true
-chrono.workspace = true
-smol.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
-log = { version="0.4.34", features = ["std", "serde"] }
+log.workspace = true
 fern = "0.7.1"
 bitflags = "2.13.1"
 portable-pty = "0.9.0"
 vte = "0.15.0"
-
+smol = "2.0.2"
+rayon = { version = "1.12.0" }
+humantime = "2.4.0"
+chrono = "0.4.45"
 [terminal]
 scrollback_lines = 10000
