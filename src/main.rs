@@ -6,7 +6,7 @@
 
 mod my_clap;
 
-use herrumbre_core::logger;
+use kyotox_core::logger;
 
 //Extern uses
 use clap::{Command, Parser};

@@ -1,14 +1,14 @@
 [package]
-name = "herrumbre"
+name = "kyotox"
 version = "0.1.0"
 edition = "2024"
 
 [workspace]
 members = [
-    "herrumbre-core",
-    "herrumbre-gui",
-    "herrumbre-script",
-    "herrumbre-tui"
+    "kyotox-core",
+    "kyotox-gui",
+    "kyotox-script",
+    "kyotox-tui"
 ]
 
 [workspace.dependencies]
@@ -27,7 +27,7 @@ clap = { version = "4.6.1", features = ["derive", "color"] }
 mimalloc = { version= "*", features = ["secure"] }
 
 #intern import
-herrumbre-core = { path = "herrumbre-core"}
+kyotox-core = { path = "kyotox-core" }
 #revisar donde
 # mlua = { version = "0.10.5", features = ["lua54", "vendored"] }
 

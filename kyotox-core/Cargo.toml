@@ -1,5 +1,5 @@
 [package]
-name = "herrumbre-core"
+name = "kyotox-core"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,8 +8,8 @@ humantime.workspace = true
 chrono.workspace = true
 smol.workspace = true
 serde.workspace = true
-toml.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 log = { version="0.4.34", features = ["std", "serde"] }
 fern = "0.7.1"
 bitflags = "2.13.1"

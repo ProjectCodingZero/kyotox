@@ -1,7 +1,7 @@
 //! Command-line argument parsing definitions using `clap`.
 
 pub use clap::{Parser, ValueEnum};
-use herrumbre_core::logger;
+use kyotox_core::logger;
 
 /// Command-line arguments for the Herrumbre application.
 #[derive(Parser, Debug)]
