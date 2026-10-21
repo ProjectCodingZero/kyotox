@@ -8,11 +8,13 @@ pub mod term;
 pub mod error;
 mod config;
 pub mod thread;
+pub mod ky_async;
 
 pub use config::{
     Config,
     CliConfig,
-    load_config
+    load_config,
+    load_config_async,
 };
 
 pub fn add(left: u64, right: u64) -> u64 {

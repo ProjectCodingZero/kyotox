@@ -1051,6 +1051,7 @@ dependencies = [
 name = "kyotox-core"
 version = "0.1.0"
 dependencies = [
+ "async-fs",
  "bitflags 2.13.1",
  "chrono",
  "fern",
@@ -1087,7 +1088,6 @@ dependencies = [
  "log",
  "mimalloc",
  "ratatui",
- "smol",
  "thiserror 2.0.21",
 ]
 

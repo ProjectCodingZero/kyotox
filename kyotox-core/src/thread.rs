@@ -12,7 +12,7 @@ fn threads_available() -> usize {
     let threads = rayon::current_num_threads();
     if threads == 1 { threads } else { threads - 1 }
 }
-/// Initializes the global Rayon thread pool with the calculated thread count.
+/// Initializes the global [`rayon::ThreadPool`] thread pool with the calculated thread count.
 pub fn set_thread_pool() -> Result<(), ThreadError> {
     let threads = threads_available();
     match rayon::ThreadPoolBuilder::new()

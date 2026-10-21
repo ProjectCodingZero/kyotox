@@ -1,13 +1,11 @@
-use core::error;
-use portable_pty::{CommandBuilder, PtySize};
+use portable_pty::CommandBuilder;
+pub use portable_pty::PtySize;
 use std::{fmt::Debug, io};
-
 pub struct PtySession {
     master: Box<dyn portable_pty::MasterPty + Send>,
     child: Box<dyn portable_pty::Child + Send>,
 }
 // TODO: Handle errors properly instead of using String
-// Handle with thiserror
 /// Represents errors that can occur during PTY operations.
 #[derive(Debug)]
 pub enum PtyError {

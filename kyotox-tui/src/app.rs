@@ -1,5 +1,5 @@
+use std::io;
 use ratatui::{DefaultTerminal, prelude::*};
-use smol::io;
 
 #[derive(Debug, Default)]
 pub struct App{

@@ -7,27 +7,28 @@
 mod clap_cli;
 mod app;
 
-use clap::Parser;
-use kyotox_core::logger;
+use kyotox_core::{ky_async, logger};
 use kyotox_core::thread::{set_thread_pool};
 //Extern uses
 use std::io;
-use crossterm::event::DisableMouseCapture;
-use crossterm::execute;
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
+use clap::Parser;
+use crossterm::{
+    execute,
+    event::DisableMouseCapture,
+    terminal::{LeaveAlternateScreen, EnterAlternateScreen
+}};
 use color_eyre::eyre::Result;
-use smol;
 
 use crate::app::App;
 use crate::clap_cli::CommandCli;
-/// Global memory allocator using `mimalloc` for high performance.
+/// Global memory allocator using [`mimalloc::MiMalloc`] for high performance.
 #[global_allocator]
 static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 /// Application entry point.
 ///
-/// Parses command-line arguments, sets up logging, panic hooks, global Rayon thread pool,
-/// initializes the Ratatui terminal UI, and runs the application main loop.
+/// Parses command-line arguments, sets up logging, panic hooks, global thread pool,
+/// initializes the [`ratatui`] terminal UI, and runs the application main loop.
 fn main() -> Result<()> {
     let args = CommandCli::parse();
     _ = logger::setup_logger(args.log);
@@ -39,7 +40,7 @@ fn main() -> Result<()> {
     let mut terminal = ratatui::init();
 
     // Run app
-    smol::block_on(async {
+    ky_async::block_on(async {
         log::trace!("Application initialized.");
         let mut app = App::default();
         let _ = app.run(&mut terminal);
