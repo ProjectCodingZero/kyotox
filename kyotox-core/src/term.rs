@@ -1,4 +1,5 @@
-use crate::{cursor::Cursor, grid::Grid, parser::Parser, pty::PtySession};
+use crate::{cursor::Cursor, grid::Grid, parser::VteBridge, pty::PtySession};
+use crate::grid::cell::Color;
 
 /// Represents the current operational mode of the editor interface.
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -15,8 +16,16 @@ pub struct Terminal {
     grid: Grid,
     cursor: Cursor,
     pty: Option<PtySession>,
-    parser: Parser,
+    parser: VteBridge,
     mode: TerminalMode,
+}
+#[derive(PartialEq, Debug)]
+pub enum EventTerminal{
+    PrintChar(char),
+    NewLine,
+    ChangeColor(Color),
+    ClearScreen,
+    None,
 }
 
 impl std::fmt::Display for TerminalMode {

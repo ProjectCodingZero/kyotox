@@ -1,9 +1,9 @@
-use portable_pty::CommandBuilder;
+use portable_pty::{CommandBuilder, MasterPty, Child};
 pub use portable_pty::PtySize;
 use std::{fmt::Debug, io};
 pub struct PtySession {
-    master: Box<dyn portable_pty::MasterPty + Send>,
-    child: Box<dyn portable_pty::Child + Send>,
+    master: Box<dyn MasterPty + Send>,
+    child: Box<dyn Child + Send>,
 }
 // TODO: Handle errors properly instead of using String
 /// Represents errors that can occur during PTY operations.
@@ -55,7 +55,7 @@ impl PtySession {
         Ok(())
     }
 }
-impl std::io::Write for PtySession {
+impl io::Write for PtySession {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self.master.take_writer() {
             Ok(mut writer) => writer.write(buf),
@@ -84,7 +84,7 @@ impl std::io::Write for PtySession {
         }
     }
 }
-impl std::io::Read for PtySession {
+impl io::Read for PtySession {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self.master.try_clone_reader() {
             Ok(mut reader) => reader.read(buf),
