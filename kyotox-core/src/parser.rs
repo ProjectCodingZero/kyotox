@@ -1,4 +1,6 @@
 use std::io::Error;
+use std::ops::Deref;
+use std::rc::Rc;
 use crate::ky_async::Sender;
 use thiserror::Error;
 use vte::{Params, Perform};
@@ -8,17 +10,40 @@ use crate::term::{EventTerminal, Terminal};
 pub enum VteError {
     #[error("Send: {0}")]
     SendError(#[from] smol::channel::SendError<EventTerminal>),
+    #[error("Parser error: {0}")]
+    ParserError(String),
 }
-#[derive(Debug)]
 pub struct VteBridge{
     sender: Sender<EventTerminal>,
-    errors: Vec<VteError>
+    errors: Vec<VteError>,
+    parser: Rc<vte::Parser>,
+}
+impl std::fmt::Debug for VteBridge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VteBridge")
+            .field("sender", &"Sender<EventTerminal>")
+            .field("errors", &self.errors)
+            .field("parser", &"Parser")
+            .finish()
+    }
 }
 impl VteBridge {
     pub fn new(sender: Sender<EventTerminal>) -> Self {
         VteBridge{
             sender,
-            errors: Vec::new()
+            errors: Vec::new(),
+            parser: Rc::new(vte::Parser::new()),
+        }
+    }
+    pub fn advance(&mut self, data: &[u8]) {
+        let mut parser = Rc::clone(&self.parser);
+        match Rc::get_mut(&mut parser) {
+            Some(parser) => {
+                parser.advance(self, data);
+            },
+            None => {
+                self.add_error(VteError::ParserError("Failed to advance parser".to_string()));
+            }
         }
     }
     fn call_once<F>(&mut self, func: F)
@@ -26,6 +51,9 @@ impl VteBridge {
         if let Err(err) = func() {
             self.errors.push(err)
         }
+    }
+    fn add_error(&mut self, error: VteError) {
+        self.errors.push(error);
     }
     pub fn pop_error(&mut self) -> Option<VteError> {
         self.errors.pop()
@@ -74,16 +102,15 @@ impl Perform for VteBridge {
     }
 }
 mod test{
-    use super::*;
-    use vte::Parser;
     use smol::channel::unbounded;
+    use super::*;
+
     #[test]
     fn test_parser() {
-        let mut parser = Parser::new();
         let (sender, receiver) = unbounded::<EventTerminal>();
         let mut vte = VteBridge::new(sender);
-        let input_data = b"A";
-        parser.advance(&mut vte, input_data);
+        let input_data = b"BAAAA";
+        vte.advance(input_data);
         let event = receiver.recv_blocking().unwrap();
         assert_eq!(event, EventTerminal::PrintChar('A'));
     }

@@ -8,9 +8,11 @@
 
 use chrono::Local;
 use fern;
-pub use log::LevelFilter;
+pub use log::{debug, error, info, log_enabled, trace, warn, LevelFilter};
 use std::time::SystemTime;
-pub fn setup_logger(level: impl Into<LevelFilter>) -> Result<(), fern::InitError> {
+pub fn setup_logger<T>(level: T) -> Result<(), fern::InitError> 
+    where T: Into<LevelFilter>
+{
     let level = level.into();
     let output_file = format!("logs/{}.log", Local::now().format("%H:%M:%S %d-%m-%Y"));
     fern::Dispatch::new()
