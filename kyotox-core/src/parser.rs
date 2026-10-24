@@ -1,9 +1,8 @@
-use std::rc::Rc;
 use crate::ky_async::Sender;
 use thiserror::Error;
 use vte::{Params, Perform};
 pub(crate) use vte::Parser;
-use crate::grid::cell::Color::Ascii;
+use crate::grid::Color::Ascii;
 use crate::term::EventTerminal;
 #[derive(Error, Debug)]
 pub enum VteError {

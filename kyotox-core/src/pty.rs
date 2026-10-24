@@ -1,24 +1,40 @@
 use portable_pty::{CommandBuilder, MasterPty, Child};
-pub use portable_pty::PtySize;
 use std::{fmt::Debug, io};
+use thiserror::Error;
+/// Represents the size of a PTY.
+/// [`portable_pty::PtySize`] Wrapper
+pub struct PtySize(pub portable_pty::PtySize);
+
+/// Represents a PTY session.
 pub struct PtySession {
     master: Box<dyn MasterPty + Send>,
     child: Box<dyn Child + Send>,
 }
-// TODO: Handle errors properly instead of using String
 /// Represents errors that can occur during PTY operations.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum PtyError {
+    #[error("Failed to spawn PTY: {0}")]
     SpawnError(String),
+    #[error("Failed to resize PTY: {0}")]
     ResizeError(String),
+    #[error("Failed to execute command: {0}")]
     CommandError(String),
 }
 
 impl PtySession {
-    pub fn spawn(command: CommandBuilder, configs: PtySize) -> Result<Self, PtyError> {
+    pub fn new<P>(size: P) -> Result<Self, PtyError>
+    where P: Into<PtySize> {
+        let size = size.into();
+        let command = CommandBuilder::new_default_prog();
+        Self::spawn(command, size)
+    }
+    pub fn spawn<P>(command: CommandBuilder, pty_size: P) -> Result<Self, PtyError>
+    where P: Into<PtySize> {
+        let pty_size = pty_size.into();
+        let size = pty_size.ptysize();
         log::info!("A new pty session has spawned");
         let pty_system = portable_pty::native_pty_system();
-        match pty_system.openpty(configs) {
+        match pty_system.openpty(size) {
             Ok(pair) => {
                 let child = pair
                     .slave
@@ -38,6 +54,7 @@ impl PtySession {
     }
 
     pub fn resize(&mut self, new_size: PtySize) {
+        let new_size = new_size.ptysize();
         self.master.resize(new_size).expect("Failed to resize PTY");
     }
     pub fn child_pid(&self) -> Option<u32> {
@@ -65,6 +82,12 @@ impl PtySession {
             }
         }
         Ok(())
+    }
+}
+impl PtySize{
+    #[inline]
+    pub fn ptysize(&self) -> portable_pty::PtySize{
+        self.0
     }
 }
 impl io::Write for PtySession {
@@ -111,6 +134,17 @@ impl io::Read for PtySession {
         }
     }
 }
+impl From<(u16, u16)> for PtySize {
+    fn from((rows, cols): (u16, u16)) -> Self {
+        PtySize(portable_pty::PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Read;
@@ -118,12 +152,8 @@ mod tests {
     use super::*;
     #[test]
     fn pty_spawn() {
-        let pty_size = PtySize {
-            rows: 24,
-            cols: 80,
-            pixel_width: 0,
-            pixel_height: 0,
-        };
+        let pty_size = (24, 84);
+
         let text = "Hello, PTY!";
         let echo_text = format!("echo '{}'", text);
         let mut cmd = CommandBuilder::new("bash");

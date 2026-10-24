@@ -2,11 +2,12 @@ use std::collections::VecDeque;
 
 use crate::cursor::Cursor;
 
-pub mod cell;
+mod cell;
+pub use cell::{Cell, Color, UnderlineStyle, CellFlags};
 
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct Row {
-    cells: Vec<cell::Cell>,
+    cells: Vec<Cell>,
 }
 
 
@@ -42,18 +43,34 @@ impl From<&Cursor> for Coordinates {
     }
 }
 impl Row {
-    pub fn new(rows: usize) -> Self {
+    pub fn new(cols: usize) -> Self {
         Self {
-            cells: vec![cell::Cell::default(); rows],
+            cells: vec![cell::Cell::default(); cols],
         }
+    }
+    pub fn cells(&self) -> &[Cell] {
+        &self.cells
+    }
+    pub fn cells_mut(&mut self) -> &mut [Cell] {
+        &mut self.cells
     }
     pub fn resize(&mut self, cols: usize) {
         self.cells.resize(cols, cell::Cell::default());
     }
 }
 impl Grid {
+    pub fn scroll_up(&mut self) {
+        if self.scrollback.len() > 0 {
+            self.scrollback.pop_front();
+        }
+    }
+    pub fn scroll_down(&mut self) {
+        if self.scrollback.len() < self.max_scrollback {
+            self.scrollback.push_back(self.viewport[0].clone());
+        }
+    }
     pub fn new(rows: usize, cols: usize, max_scrollback: usize) -> Self {
-        let viewport = vec![Row::new(rows); cols];
+        let viewport = vec![Row::new(cols); rows];
         Grid{
             viewport,
             scrollback: VecDeque::new(),
@@ -61,6 +78,18 @@ impl Grid {
             rows,
             max_scrollback,
         }
+    }
+    pub fn viewport(&self) -> &[Row] {
+        &self.viewport
+    }
+    pub fn viewport_mut(&mut self) -> &mut [Row] {
+        &mut self.viewport
+    }
+    pub fn cols(&self) -> usize {
+        self.cols
+    }
+    pub fn rows(&self) -> usize {
+        self.rows
     }
     pub fn resize(&mut self, rows: usize, cols: usize) {
         if rows == 0 || cols == 0 {

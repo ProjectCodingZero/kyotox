@@ -7,7 +7,7 @@
 mod clap_cli;
 mod app;
 
-use kyotox_core::{ky_async, logger};
+use kyotox_core::{ky_async, load_config, load_config_async, logger};
 use kyotox_core::thread::{set_thread_pool};
 //Extern uses
 use std::io;
@@ -29,7 +29,7 @@ static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 ///
 /// Parses command-line arguments, sets up logging, panic hooks, global thread pool,
 /// initializes the [`ratatui`] terminal UI, and runs the application main loop.
-fn main() -> Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let args = CommandCli::parse();
     _ = logger::setup_logger(args.log);
     // Start configure
@@ -41,8 +41,10 @@ fn main() -> Result<()> {
 
     // Run app
     ky_async::block_on(async {
+        let config = load_config_async("config.toml").await.unwrap();
         log::trace!("Application initialized.");
-        let mut app = App::default();
+        let area = terminal.size().unwrap();
+        let mut app = App::new(config, area.height, area.width);
         let _ = app.run(&mut terminal);
     });
 

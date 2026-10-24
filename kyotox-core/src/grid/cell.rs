@@ -68,6 +68,18 @@ impl Cell {
             underline: UnderlineStyle::None,
         }
     }
+    pub fn fg(&self) -> Option<Color> {
+        self.fg
+    }
+    pub fn bg(&self) -> Option<Color> {
+        self.bg
+    }
+    pub fn attrs(&self) -> CellFlags {
+        self.attrs
+    }
+    pub fn underline(&self) -> UnderlineStyle {
+        self.underline
+    }
     pub fn set_foreground(&mut self, fg: Option<Color>) {
         self.fg = fg;
     }
