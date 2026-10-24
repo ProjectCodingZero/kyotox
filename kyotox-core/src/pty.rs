@@ -43,6 +43,18 @@ impl PtySession {
     pub fn child_pid(&self) -> Option<u32> {
         self.child.process_id()
     }
+    pub fn clone_reader(&mut self) -> Result<Box<dyn io::Read + Send>, PtyError> {
+        match self.master.try_clone_reader() {
+            Ok(reader) => Ok(Box::new(reader)),
+            Err(e) => Err(PtyError::ResizeError(e.to_string())),
+        }
+    }
+    pub fn take_writer(&mut self) -> Result<Box<dyn io::Write + Send>, PtyError> {
+        match self.master.take_writer() {
+            Ok(writer) => Ok(Box::new(writer)),
+            Err(e) => Err(PtyError::ResizeError(e.to_string())),
+        }
+    }
     pub fn kill_child(&mut self) -> Result<(), PtyError> {
         if let Some(pid) = self.child.process_id() {
             // Attempt to terminate the child process gracefully
@@ -127,5 +139,11 @@ mod tests {
             actual_text,
             expected_text
         );
+    }
+}
+
+impl Debug for PtySession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PtySession {{ pid: {:?} }}", self.child.process_id())
     }
 }

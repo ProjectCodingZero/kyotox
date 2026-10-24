@@ -10,8 +10,6 @@ resolver = "2"
 [workspace.dependencies]
 kyotox-core = { path = "kyotox-core" }
 kyotox-script = { path = "kyotox-script"}
-kyotox-tui = { path = "kyotox-tui"}
-kyotox-gui = { path = "kyotox-gui"}
 mimalloc = { version= "0.1.52", features = ["secure"] }
 thiserror = "2.0.21"
 serde = { version = "1.0.229", features = ["derive"] }

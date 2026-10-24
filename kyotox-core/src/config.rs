@@ -15,13 +15,14 @@ pub enum ConfigError{
 }
 #[derive(Debug, Default, Deserialize)]
 pub struct Config{
-    debug: bool,
-    cli: CliConfig,
+    pub debug: bool,
+    pub cli: CliConfig,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CliConfig {
-    log: LevelFilter,
+    pub log: LevelFilter,
+    pub scrollback_lines: usize,
 }
 impl Config{
     fn new(content: impl ToString) -> Self{
@@ -56,6 +57,7 @@ impl Default for CliConfig {
     fn default() -> Self {
         Self{
             log: LevelFilter::Off,
+            scrollback_lines: 10000,
         }
     }
 }
