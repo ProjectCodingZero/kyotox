@@ -5,7 +5,7 @@ use crate::grid::cell::Color;
 
 /// Represents the current operational mode of the editor interface.
 #[derive(Debug, PartialEq, Default, Clone)]
-enum TerminalMode {
+pub enum TerminalMode {
     /// Default mode: Inserts typed characters at the current cursor position.
     #[default]
     Insert,
@@ -16,11 +16,11 @@ enum TerminalMode {
 }
 #[derive(Debug)]
 pub struct Terminal {
-    grid: Grid,
-    cursor: Cursor,
+    pub grid: Grid,
+    pub cursor: Cursor,
     pty: Option<PtySession>,
     event_rx: smol::channel::Receiver<EventTerminal>,
-    mode: TerminalMode,
+    pub mode: TerminalMode,
 }
 impl Terminal {
     pub fn new(height: usize, width: usize, config: config::Config) -> Self {
@@ -65,7 +65,7 @@ impl Terminal {
         self.grid.resize(height, width);
     }
 }
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum EventTerminal{
     PrintChar(char),
     NewLine,
