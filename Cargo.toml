@@ -1,16 +1,28 @@
 [workspace]
 members = [
-    "kyotox-core",
-    "kyotox-gui",
-    "kyotox-script",
-    "kyotox-tui"
+    "crates/kyotox-config",
+    "crates/kyotox-core",
+    "crates/kyotox-input",
+    "crates/kyotox-pty",
+    "crates/kyotox-script",
+    "crates/kyotox-session",
+    "crates/kyotox-term",
+    "crates/kyotox-gui",
+    "crates/kyotox-tui",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-kyotox-core = { path = "kyotox-core" }
-kyotox-script = { path = "kyotox-script"}
+kyotox-core = { path = "crates/kyotox-core" }
+kyotox-config = { path = "crates/kyotox-config" }
+kyotox-pty = { path = "crates/kyotox-pty" }
+kyotox-input = { path = "crates/kyotox-input" }
+kyotox-script = { path = "crates/kyotox-script" }
+kyotox-session = { path = "crates/kyotox-session" }
+kyotox-term = { path = "crates/kyotox-term" }
 mimalloc = { version= "0.1.52", features = ["secure"] }
+bitflags = "2.13.1"
+vte = "0.15.0"
 thiserror = "2.0.21"
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.1.8"

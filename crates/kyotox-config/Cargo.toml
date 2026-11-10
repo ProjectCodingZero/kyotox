@@ -1,5 +1,5 @@
 [package]
-name = "kyotox-core"
+name = "kyotox-config"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,9 +9,6 @@ thiserror.workspace = true
 toml.workspace = true
 log.workspace = true
 fern = "0.7.1"
-bitflags = "2.13.1"
-portable-pty = "0.9.0"
-vte = "0.15.0"
 smol = "2.0.2"
 async-fs = "2.0"
 rayon = { version = "1.12.0" }

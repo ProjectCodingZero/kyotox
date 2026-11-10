@@ -1,0 +1,10 @@
+[package]
+name = "kyotox-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+kyotox-config.workspace = true
+kyotox-pty.workspace = true
+kyotox-session.workspace = true
+kyotox-term.workspace = true

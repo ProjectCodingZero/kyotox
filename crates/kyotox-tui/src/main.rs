@@ -7,8 +7,8 @@
 mod clap_cli;
 mod app;
 
-use kyotox_core::{ky_async, load_config, load_config_async, logger};
-use kyotox_core::thread::{set_thread_pool};
+use kyotox_core::{load_config, logger};
+use kyotox_core::thread::set_thread_pool;
 //Extern uses
 use std::io;
 use clap::Parser;
@@ -40,13 +40,11 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let mut terminal = ratatui::init();
 
     // Run app
-    ky_async::block_on(async {
-        let config = load_config_async("config.toml").await.unwrap();
-        log::trace!("Application initialized.");
-        let area = terminal.size().unwrap();
-        let mut app = App::new(config, area.height, area.width);
-        let _ = app.run(&mut terminal);
-    });
+    let config = load_config("config.toml")?;
+    log::trace!("Application initialized.");
+    let area = terminal.size()?;
+    let mut app = App::new(config, area.height, area.width);
+    let _ = app.run(&mut terminal);
 
     // Clean up terminal state on exit
     execute!(io::stdout(), LeaveAlternateScreen).ok();

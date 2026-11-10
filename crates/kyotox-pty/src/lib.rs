@@ -19,6 +19,8 @@ pub enum PtyError {
     ResizeError(String),
     #[error("Failed to execute command: {0}")]
     CommandError(String),
+    #[error("Failed to use PTY writer: {0}")]
+    WriterError(String),
 }
 
 impl PtySession {

@@ -1,0 +1,13 @@
+[package]
+name = "kyotox-gui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+egui = "0.28"
+eframe = { version = "0.28"}
+# Manejo del Pseudo-Terminal (PTY)
+portable-pty = "0.8"
+
+# Procesador de secuencias de escape de terminal
+vte = "0.11"
