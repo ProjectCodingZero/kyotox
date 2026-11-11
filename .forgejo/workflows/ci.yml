@@ -1,51 +1,251 @@
-name: Check for CRLF
-on: 
+# Continuous integration for the Kyotox workspace.
+#
+# Design goals:
+# - Every check has its own job so a failure is easy to locate.
+# - Rust builds share a Cargo cache keyed by Cargo.lock.
+# - The required `ci` job gives branch protection one stable status.
+# - Formatting and strict Clippy are advisory for now: they report problems
+#   without blocking merges until the existing warnings are cleaned up.
+
+name: CI
+
+on:
   push:
     branches:
-      - main 
-      - develop
+      - main
+      - development
       - 'feature/**'
   pull_request:
     branches:
       - main
-      - develop
+      - development
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+
+defaults:
+  run:
+    shell: sh
 
 jobs:
-  check-line-endings:
-    runs-on: codeberg-medium
+  line_endings:
+    name: Line endings
+    runs-on: codeberg-medium-lazy
     container:
       image: rust:alpine
+    timeout-minutes: 5
     steps:
-      - name: Toolchain Configuration Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies for Actions
-        run: |
-          apk add --no-cache nodejs git file
-          rustup component add clippy
+      - name: Install runner dependencies
+        run: apk add --no-cache nodejs git
 
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify if not CRLF
+      - name: Reject CRLF in tracked text files
         run: |
-          files=$(find . -type f -not -path "./.git/*" -not -path "./target/*" -exec file {} + | grep "CRLF" | cut -d: -f1)
-          if [ -n "$files" ]; then
-            echo "Error: Files are not using LF"
-            echo "$files"
-            echo "HAS_CRLF=true" > /tmp/has_crlf_error
-          else
-            echo "OK: Files only uses LF"
-            echo "HAS_CRLF=false" > /tmp/has_crlf_error
-          fi
-        continue-on-error: true
+          cr=$(printf '\r')
 
-      - name: Run Build
-        if: github.ref_name == 'main'
-        run: |
-          cargo build ${{ github.ref_name == 'main' && '--release' || '' }} --verbose
+          # Search the index so the check sees committed content even when
+          # checkout normalizes line endings. -I skips binaries.
+          # .bat files are explicitly allowed to use CRLF by .gitattributes.
+          files=$(git grep --cached -Il "$cr" -- ':!*.bat' || true)
+
+          if [ -n "$files" ]; then
+            echo "::error::The following tracked files contain CRLF line endings:"
+            echo "$files"
+            echo ""
+            echo "Convert them to LF before committing."
+            exit 1
+          fi
+
+          echo "OK: tracked text files use LF."
+
+  format:
+    name: Formatting (advisory)
+    runs-on: codeberg-medium-lazy
+    container:
+      image: rust:alpine
+    timeout-minutes: 10
+    steps:
+      - name: Install runner dependencies
+        run: apk add --no-cache nodejs git
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Check formatting
+        continue-on-error: true
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy (strict, advisory)
+    runs-on: codeberg-medium-lazy
+    container:
+      image: rust:alpine
+    timeout-minutes: 30
+    steps:
+      - name: Install runner dependencies
+        run: apk add --no-cache nodejs git build-base pkgconf wayland-dev
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install clippy
+        run: rustup component add clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Run Clippy
+        continue-on-error: true
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: Test
+    runs-on: codeberg-medium-lazy
+    container:
+      image: rust:alpine
+    timeout-minutes: 30
+    steps:
+      - name: Install runner dependencies
+        run: apk add --no-cache nodejs git bash build-base pkgconf wayland-dev
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run tests
+        run: cargo test --workspace --locked
+
+  build:
+    name: Build
+    runs-on: codeberg-medium-lazy
+    container:
+      image: rust:alpine
+    timeout-minutes: 30
+    steps:
+      - name: Install runner dependencies
+        run: apk add --no-cache nodejs git build-base pkgconf wayland-dev
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build workspace
         run: |
-          cargo clippy -- -D warnings
-    
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            cargo build --workspace --release --locked
+          else
+            cargo build --workspace --all-targets --locked
+          fi
+
+  docs:
+    name: Documentation
+    runs-on: codeberg-medium-lazy
+    container:
+      image: rust:alpine
+    timeout-minutes: 20
+    steps:
+      - name: Install runner dependencies
+        run: apk add --no-cache nodejs git build-base pkgconf wayland-dev
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps --locked
+
+  ci:
+    name: CI
+    if: always()
+    needs:
+      - line_endings
+      - format
+      - clippy
+      - test
+      - build
+      - docs
+    runs-on: codeberg-medium-lazy
+    container:
+      image: rust:alpine
+    steps:
+      - name: Verify required jobs
+        env:
+          LINE_ENDINGS: ${{ needs.line_endings.result }}
+          FORMAT: ${{ needs.format.result }}
+          CLIPPY: ${{ needs.clippy.result }}
+          TEST: ${{ needs.test.result }}
+          BUILD: ${{ needs.build.result }}
+          DOCS: ${{ needs.docs.result }}
+        run: |
+          echo "line_endings: $LINE_ENDINGS"
+          echo "format: $FORMAT"
+          echo "clippy: $CLIPPY"
+          echo "test: $TEST"
+          echo "build: $BUILD"
+          echo "docs: $DOCS"
+
+          for result in "$LINE_ENDINGS" "$FORMAT" "$CLIPPY" "$TEST" "$BUILD" "$DOCS"; do
+            if [ "$result" != "success" ]; then
+              echo "::error::One or more CI jobs did not succeed."
+              exit 1
+            fi
+          done
