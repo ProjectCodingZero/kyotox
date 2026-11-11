@@ -1,3 +1,5 @@
 /target
 /.zed/**
 /.idea/**
+/logs
+.env

@@ -1,0 +1,5 @@
+debug=true
+
+[cli]
+scrollback_lines = 10000
+log="Trace"
